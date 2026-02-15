@@ -6,119 +6,161 @@
 
 namespace eg::numbers
 {
-    static constexpr std::array<std::string_view, 10> k_num_100_900 = 
+    constexpr std::array<std::string_view, 10> k_num_100_900  
     {  
-        "", "one hundred ", "two hundred ", "three hundred ", "four hundred ", "five hundred ", "six hundred ", "seven hundred ", "eight hundred ", "nine hundred" 
+       "","one hundred","two hundred","three hundred","four hundred","five hundred","six hundred","seven hundred","eight hundred","nine hundred" 
     };
 
-    // max: ull 64-bit
-    //
-    // 18,446,744,073,709,551,615
-    //
-    // quintillion
-    //    quadrillion
-    //        trillion
-    //            billion
-    //                million
-    //                    thousand
-    //                        -
-
-    static constexpr std::array<std::string_view, 7> k_muls = 
+    // max: unsigned 128-bit (2^128 -1);
+    // 340,282,366,920,938,463,463,374,607,431,768,211,455
+    constexpr std::array<std::string_view, 15> k_muls  
     { 
-        "", "thousand ", "million ", "billion ", "trillion ", "quadrillion ", "quintillion " 
-        //, "sixtillion ", "septillion ", "octillion ", "nonillion ", "decillion" 
+       "","thousand","million","billion","trillion","quadrillion","quintillion",
+       "sixtillion","septillion","octillion","nonillion","decillion","undecillion","duodecillion","tredecillion"
     };
 
-    static constexpr std::array<std::string_view, 100> k_num_00_99 =
+    constexpr std::array<std::string_view, 100> k_num_00_99 
     {
-        "", "one ","two ","three ","four ","five ","six ","seven ","eight ","nine ",
-        "ten ","eleven ","twelve ","thirteen ","fourteen ","fifteen ","sixteen ","seventeen ","eighteen ","nineteen ",
-        "twenty ","twenty one ","twenty two ","twenty three ","twenty four ","twenty five ","twenty six ","twenty seven ","twenty eight ","twenty nine ",
-        "thirty ","thirty one ","thirty two ","thirty three ","thirty four ","thirty five ","thirty six ","thirty seven ","thirty eight ","thirty nine ",
-        "forty ","forty one ","forty two ","forty three ","forty four ","forty five ","forty six ","forty seven ","forty eight ","forty nine ",
-        "fifty ","fifty one ","fifty two ","fifty three ","fifty four ","fifty five ","fifty six ","fifty seven ","fifty eight ","fifty nine ",
-        "sixty ","sixty one ","sixty two ","sixty three ","sixty four ","sixty five ","sixty six ","sixty seven ","sixty eight ","sixty nine ",
-        "seventy ","seventy one ","seventy two ","seventy three ","seventy four ","seventy five ","seventy six ","seventy seven ","seventy eight ","seventy nine ",
-        "eighty ","eighty one ","eighty two ","eighty three ","eighty four ","eighty five ","eighty six ","eighty seven ","eighty eight ","eighty nine ",
-        "ninety ","ninety one ","ninety two ","ninety three ","ninety four ","ninety five ","ninety six ","ninety seven ","ninety eight ","ninety nine"
+       "","one","two","three","four","five","six","seven","eight","nine",
+       "ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen",
+       "twenty","twenty one","twenty two","twenty three","twenty four","twenty five","twenty six","twenty seven","twenty eight","twenty nine",
+       "thirty","thirty one","thirty two","thirty three","thirty four","thirty five","thirty six","thirty seven","thirty eight","thirty nine",
+       "forty","forty one","forty two","forty three","forty four","forty five","forty six","forty seven","forty eight","forty nine",
+       "fifty","fifty one","fifty two","fifty three","fifty four","fifty five","fifty six","fifty seven","fifty eight","fifty nine",
+       "sixty","sixty one","sixty two","sixty three","sixty four","sixty five","sixty six","sixty seven","sixty eight","sixty nine",
+       "seventy","seventy one","seventy two","seventy three","seventy four","seventy five","seventy six","seventy seven","seventy eight","seventy nine",
+       "eighty","eighty one","eighty two","eighty three","eighty four","eighty five","eighty six","eighty seven","eighty eight","eighty nine",
+       "ninety","ninety one","ninety two","ninety three","ninety four","ninety five","ninety six","ninety seven","ninety eight","ninety nine"
     };
 
-    static constexpr auto k_stack_sz = k_muls.size() * 2;
+    constexpr size_t k_stack_sz {k_muls.size() * 2};
+    constexpr std::array<std::string_view, 2> k_sign {"","negative"};
+    constexpr std::string_view k_zero {"zero"};
 
-    template<std::integral T>
-    static std::string num2words(T n)
+    template<typename T>
+    requires (std::integral<T> and not std::same_as<T, bool>)
+    std::string num2words(T n)
     {
-        static_assert(sizeof(void*) == 8, "Can be compiled only with 64-bit systems.");
+        static_assert(std::numeric_limits<std::make_unsigned_t<T>>::digits10 <= 42, "num2words can support up to tredecillion only!");
 
-        if constexpr (std::signed_integral<T>) 
+        using unsigned_t = std::make_unsigned_t<T>;
+        unsigned_t u {0};
+        size_t s_ix {0};
+
+        if constexpr (std::signed_integral<T>)
         {
-            if (n == INT_MIN)
-            {
-                return std::string{k_num_00_99.front()};
-            }
-
-            if (n < 0)
-            {
-                n *= -1;
-            }
+            // Safe conversion for min limits
+            u = n < 0 ? static_cast<unsigned_t>(-(n + 1)) + 1 : static_cast<unsigned_t>(n);
+            s_ix = n < 0;
         }
 
-        if (n < 100) 
+        else 
         {
-            return std::string{k_num_00_99[n]};
+            u = n;
+            s_ix = 0;
+        }
+
+        if (u == 0)
+        {
+            return k_zero;
+        }
+
+        if (u < 100) 
+        {
+            return std::string{k_num_00_99[u]};
         }
 
         std::array<int, k_stack_sz> ixs {0};
-        auto ixs_i {0uz};
-        auto str_sz {0uz};
+        size_t ixs_i {0};
+        size_t str_sz {0};
+        size_t segment_count {0};
 
-        using unsigned_t = std::make_unsigned_t<T>;
-
-        for (auto m {0uz};;)
+        for (size_t m {0};; ++m)
         {
-            size_t num_2digit_ix {static_cast<unsigned_t>(n % 100)};
-            size_t num_3digit_ix {static_cast<unsigned_t>((n / 100) % 10)};
-            
-            n /= 1'000;
+            const size_t num_2digit_ix {u % 100};
+            const size_t num_3digit_ix {(u / 100) % 10};
+
+            u /= 1'000;
 
             ixs[ixs_i++] = num_2digit_ix;   // push
             ixs[ixs_i++] = num_3digit_ix;   // push
 
-            str_sz += k_num_00_99[num_2digit_ix].size();
-            str_sz += k_num_100_900[num_3digit_ix].size();
-            str_sz += (num_2digit_ix > 0 or num_3digit_ix > 0) ? k_muls[m].size() : 0;
+            if (num_3digit_ix > 0)
+            {
+                str_sz += k_num_100_900[num_3digit_ix].size();
+                ++segment_count;
+            }
 
-            if (n == 0) 
+            if (num_2digit_ix > 0)
+            {
+                str_sz += k_num_00_99[num_2digit_ix].size();
+                ++segment_count;
+            }
+
+            if (num_3digit_ix > 0 || num_2digit_ix > 0)
+            {
+                str_sz += k_muls[m].size();
+                ++segment_count;
+            }
+
+            if (u == 0)
             {
                 break;
             }
-            
-            m += 1;
-        } 
+        }
 
-        auto muls_ix {ixs_i / 2uz - 1uz};
+        if (s_ix > 0)
+        {
+            str_sz += k_sign[s_ix].size();
+            ++segment_count;
+        }
 
+        const size_t space_count = segment_count > 0 ? segment_count - 1 : 0;
+        
+        size_t muls_ix {ixs_i / 2 - 1};
+        
         std::string num_words;
-        num_words.reserve(str_sz);
+        num_words.reserve(str_sz + space_count);
+
+        if (s_ix > 0)
+        {
+            num_words.append(k_sign[s_ix]);
+        }
+
+        const auto append_with_space =
+                [&](const std::string_view word)
+                {
+                    if (not num_words.empty())
+                    {
+                        num_words.push_back(' ');
+                    }
+
+                    num_words.append(word);
+                };
 
         do
         {
             const auto num_3digit_ix = ixs[--ixs_i];    // pop
             const auto num_2digit_ix = ixs[--ixs_i];    // pop
 
-            num_words.append(k_num_100_900[num_3digit_ix]);
-            num_words.append(k_num_00_99[num_2digit_ix]);
+            if (num_3digit_ix > 0)
+            {
+                append_with_space(k_num_100_900[num_3digit_ix]);
+            }
+
+            if (num_2digit_ix > 0)
+            {
+                append_with_space(k_num_00_99[num_2digit_ix]);
+            }
 
             if (num_3digit_ix > 0 or num_2digit_ix > 0)
             {
-                num_words.append(k_muls[muls_ix]);
+                append_with_space(k_muls[muls_ix]);
             }
 
             --muls_ix;
         } while (ixs_i > 0);
 
-        assert(str_sz == num_words.capacity());
-        
         return num_words;
     }
 }
