@@ -4,6 +4,30 @@
 #include <concepts>
 #include <limits>
 
+
+    template<typename T>
+    struct make_unsigned_ext
+    {
+        using type = std::make_unsigned_t<T>;
+    };
+
+    template<>
+    struct make_unsigned_ext<__int128>
+    {
+        using type = unsigned __int128;
+    };
+
+    template<>
+    struct make_unsigned_ext<unsigned __int128>
+    {
+        using type = unsigned __int128;
+    };
+
+    template<typename T>
+    using make_unsigned_ext_t = typename make_unsigned_ext<T>::type;
+
+
+
 namespace eg::numbers
 {
     constexpr std::array<std::string_view, 10> k_num_100_900  
@@ -37,13 +61,15 @@ namespace eg::numbers
     constexpr std::array<std::string_view, 2> k_sign {"","negative"};
     constexpr std::string_view k_zero {"zero"};
 
+
     template<typename T>
-    requires (std::integral<T> and not std::same_as<T, bool>)
+    requires ((std::integral<T> or std::same_as<T, __int128> or std::same_as<T, unsigned __int128>) and not std::same_as<T, bool>)
     std::string num2words(T n)
     {
-        static_assert(std::numeric_limits<std::make_unsigned_t<T>>::digits10 <= 42, "num2words can support up to tredecillion only!");
+        static_assert(std::numeric_limits<make_unsigned_ext_t<T>>::digits10 <= 42, "num2words can support up to tredecillion only!");
 
-        using unsigned_t = std::make_unsigned_t<T>;
+        using unsigned_t = make_unsigned_ext_t<T>;
+
         unsigned_t u {0};
         size_t s_ix {0};
 
@@ -62,7 +88,7 @@ namespace eg::numbers
 
         if (u == 0)
         {
-            return k_zero;
+            return std::string {k_zero};
         }
 
         if (u < 100) 
@@ -77,8 +103,8 @@ namespace eg::numbers
 
         for (size_t m {0};; ++m)
         {
-            const size_t num_2digit_ix {u % 100};
-            const size_t num_3digit_ix {(u / 100) % 10};
+            const size_t num_2digit_ix {static_cast<size_t>(u % 100)};
+            const size_t num_3digit_ix {static_cast<size_t>((u / 100) % 10)};
 
             u /= 1'000;
 
