@@ -1,3 +1,38 @@
+/*
+MIT License
+
+Copyright (c) 2025 Everett Gaius S. Vergara
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+/*
+num2words
+---------
+
+Header-only modern C++20 integer-to-English converter with support for
+standard integral types and GCC/Clang __int128 extensions.
+
+*/
+
+#pragma once 
+
 #include <string_view>
 #include <array>
 #include <cassert> 
@@ -5,12 +40,17 @@
 #include <limits>
 
 
+
+namespace eg::numbers
+{
+
     template<typename T>
     struct make_unsigned_ext
     {
         using type = std::make_unsigned_t<T>;
     };
 
+#if defined(__SIZEOF_INT128__)
     template<>
     struct make_unsigned_ext<__int128>
     {
@@ -23,13 +63,12 @@
         using type = unsigned __int128;
     };
 
+#endif
+
     template<typename T>
     using make_unsigned_ext_t = typename make_unsigned_ext<T>::type;
 
 
-
-namespace eg::numbers
-{
     constexpr std::array<std::string_view, 10> k_num_100_900  
     {  
        "","one hundred","two hundred","three hundred","four hundred","five hundred","six hundred","seven hundred","eight hundred","nine hundred" 
@@ -63,7 +102,14 @@ namespace eg::numbers
 
 
     template<typename T>
-    requires ((std::integral<T> or std::same_as<T, __int128> or std::same_as<T, unsigned __int128>) and not std::same_as<T, bool>)
+    requires (
+                (std::integral<T> 
+                    
+#if defined(__SIZEOF_INT128__)                    
+                    or std::same_as<T, __int128> or 
+                    std::same_as<T, unsigned __int128>
+#endif
+                ) and not std::same_as<T, bool>)
     std::string num2words(T n)
     {
         static_assert(std::numeric_limits<make_unsigned_ext_t<T>>::digits10 <= 42, "num2words can support up to tredecillion only!");
