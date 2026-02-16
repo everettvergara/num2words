@@ -18,6 +18,5 @@ int main(int, char *[])
     std::cout << 
     eg::numbers::num2words(max_unsigned)  << "\n\n"; 
 
-
     return EXIT_SUCCESS;
 }

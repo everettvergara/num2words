@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2025 Everett Gaius S. Vergara
+Copyright (c) 2026 Everett Gaius S. Vergara
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,8 +26,39 @@ SOFTWARE.
 num2words
 ---------
 
-Header-only modern C++20 integer-to-English converter with support for
-standard integral types and GCC/Clang __int128 extensions.
+A header-only C++20 library that converts integers to their English
+word representation.
+
+Supports all standard integral types and GCC/Clang `__int128`
+extensions.
+
+Minimizes allocations by pre-reserving output capacity and avoiding
+intermediate string concatenations.
+
+Sample usage:
+
+#include <iostream>
+#include "num2words.hpp"
+
+int main(int, char *[])
+{
+    const auto max_signed   = std::numeric_limits<__int128>::max();
+    const auto max_unsigned = std::numeric_limits<unsigned __int128>::max();
+
+    std::cout << 18'446'744'073'709'551'615ull << "\n" <<
+    eg::numbers::num2words(18'446'744'073'709'551'615ull) << "\n\n"; 
+   
+    // 170'141'183'460'469'231'731'687'303'715'884'105'727
+    std::cout <<  
+    eg::numbers::num2words(max_signed) << "\n\n"; 
+
+    // 340'282'366'920'938'463'463'374'607'431'768'211'455
+    std::cout << 
+    eg::numbers::num2words(max_unsigned)  << "\n\n"; 
+
+    return EXIT_SUCCESS;
+}
+
 
 */
 
@@ -104,7 +135,7 @@ namespace eg::numbers
     template<typename T>
     requires (
                 (std::integral<T> 
-                    
+
 #if defined(__SIZEOF_INT128__)                    
                     or std::same_as<T, __int128> or 
                     std::same_as<T, unsigned __int128>
