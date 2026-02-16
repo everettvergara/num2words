@@ -35,6 +35,10 @@ extensions.
 Minimizes allocations by pre-reserving output capacity and avoiding
 intermediate string concatenations.
 
+Note: While embedding trailing spaces in the literals would reduce conditional checks,
+the current design keeps lexical data and formatting logic separate. Spacing is handled
+centrally to avoid hidden formatting artifacts and preserve clean, reusable word tokens.
+
 Sample usage:
 
 #include <iostream>
@@ -69,7 +73,6 @@ int main(int, char *[])
 #include <cassert> 
 #include <concepts>
 #include <limits>
-
 
 
 namespace eg::numbers
@@ -170,6 +173,16 @@ namespace eg::numbers
 
         if (u < 100) 
         {
+            if (s_ix > 0)
+            {
+                std::string result;
+                result.reserve(k_sign[s_ix].size() + 1 + k_num_00_99[u].size());
+                result.append(k_sign[s_ix]);
+                result.push_back(' ');
+                result.append(k_num_00_99[u]);
+                return result;
+            }
+
             return std::string{k_num_00_99[u]};
         }
 
